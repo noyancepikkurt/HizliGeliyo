@@ -20,10 +20,8 @@ class WebService {
                 
                 if let ItemsList = ItemsList {
                     completion(ItemsList)
-                    
                 }
             }
         }.resume()
-        
     }
 }

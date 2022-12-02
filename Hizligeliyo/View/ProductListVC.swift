@@ -12,59 +12,84 @@ import SDWebImage
 class ProductListVC: UIViewController {
     
     @IBOutlet weak var collectionView: UICollectionView!
-    private var ItemListViewModel : ItemsListViewModel!
+    private var ItemListViewModel : ItemsListViewModel?
     
+    @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var searchBar: UISearchBar!
     
-    var aramasonucuItemler = [ItemsModel]()
-    var aramayapiliyorMu = false
+    var searchedItems = [ItemsModel]() {
+        didSet {
+            nameLabel.text = ""
+            self.collectionView.reloadData()
+        }
+    }
+    
+    var selectedCell = ""
+    var isSearching = false
+    var buttonBasildiMi = false
+    
+    private var items = [ItemsModel]()
+    
+    var itemsModel = [ItemsModel]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let tasarim : UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+        let design : UICollectionViewFlowLayout = UICollectionViewFlowLayout()
         
-        let genislik = self.collectionView.frame.size.width
+        let width = self.collectionView.frame.size.width
         
-        tasarim.sectionInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        design.sectionInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         
-        tasarim.minimumInteritemSpacing = 20
-        tasarim.minimumLineSpacing = 10
+        design.minimumInteritemSpacing = 20
+        design.minimumLineSpacing = 10
         
-        let hucregenislik = (genislik-60) / 2
-        tasarim.itemSize = CGSize(width: hucregenislik, height: hucregenislik*1.85)
+        let cellWidth = (width-60) / 2
+        design.itemSize = CGSize(width: cellWidth, height: cellWidth*1.85)
         
-        collectionView!.collectionViewLayout = tasarim
+        collectionView!.collectionViewLayout = design
+        
+        // shadowBox +++
         
         collectionView.delegate = self
         collectionView.dataSource = self
         
         self.searchBar.delegate = self
-        
+            
         let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(hideKeyboard))
         view.addGestureRecognizer(gestureRecognizer)
         
+
         getData()
+    }
+    
+    @IBAction func sortButtonClicked(_ sender: Any) {
+        
+        buttonBasildiMi = true
+        collectionView.reloadData()
         
     }
     
-    @objc func hideKeyboard() {
+    
+   @objc func hideKeyboard() {
         view.endEditing(true)
     }
     
     func getData() {
         let url = URL(string: "https://fakestoreapi.com/products")!
         
-        WebService().downloadInfos(url: url) { (Items) in
-            if let Items = Items {
-     
-                self.ItemListViewModel = ItemsListViewModel(ItemsList: Items)
-                
-                DispatchQueue.main.async {
-                    self.collectionView.reloadData()
+        WebService().downloadInfos(url: url) { (items) in
+            DispatchQueue.main.async {
+                if let items = items {
+                    self.items = items
+                    self.searchedItems = items
                 }
             }
         }
+    }
+    
+    @IBAction func filtreButtonClicked(_ sender: Any) {
+        performSegue(withIdentifier: "toFilterVC", sender: nil)
     }
 }
 
@@ -76,53 +101,91 @@ extension ProductListVC:UICollectionViewDelegate,UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        if aramayapiliyorMu == true {
-            return aramasonucuItemler.count
+                
+        if isSearching {
+            return self.searchedItems.count
         } else {
-            return self.ItemListViewModel == nil ? 0 : self.ItemListViewModel.numberOfItemsInSection()
+            switch selectedCell {
+            case "men's clothing":
+                let filter = items.filter { $0.category.starts(with: "m") }
+                nameLabel.text = "Men's Clothing Category : "
+                return filter.count
+            case "jewelery":
+                let filter = items.filter { $0.category.starts(with: "j") }
+                nameLabel.text = "Jewelery Category : "
+                return filter.count
+                
+            case "electronics" :
+                let filter = items.filter { $0.category.starts(with: "e") }
+                nameLabel.text = "Electronics Category : "
+                return filter.count
+                
+            case "women's clothing":
+                let filter = items.filter { $0.category.starts(with: "w") }
+                nameLabel.text = "Women's Clothing Category: "
+                return filter.count
+                
+            default:
+                return self.searchedItems.count
+            }
         }
-        return self.ItemListViewModel == nil ? 0 : self.ItemListViewModel.numberOfItemsInSection()
     }
+    
+    
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as! CollectionViewCell
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as? CollectionViewCell else { return UICollectionViewCell() }
         
-       
-        let ItemsViewModel = self.ItemListViewModel.ItemsAtIndex(indexPath.item)
+        let data = self.searchedItems[indexPath.item]
+        let sorting = items.sorted()
+        // cell.load(with: data)
         
-        
-        if aramayapiliyorMu == true {
-            cell.itemTitleLabel.text = aramasonucuItemler[indexPath.item].title
-            cell.itemPriceLabel.text = String("\(aramasonucuItemler[indexPath.item].price) TL ")
-            cell.imageView.sd_setImage(with: URL(string: aramasonucuItemler[indexPath.item].image))
-            collectionView.reloadData()
-            
+        if buttonBasildiMi {
+            cell.load(with: sorting[indexPath.row])
         } else {
-                
-                cell.itemTitleLabel.text = ItemsViewModel.title
-                cell.itemPriceLabel.text = String("\(ItemsViewModel.price) TL")
-                cell.imageView.sd_setImage(with: URL(string: ItemsViewModel.image))
-            
+            cell.load(with: data)
         }
         
+        if isSearching {
+            cell.load(with: data)
+            
+        } else {
+            switch selectedCell {
+            case "men's clothing":
+                let filter = items.filter { $0.category.starts(with: "m")}.sorted()
+                cell.load(with: filter[indexPath.row])
+            case "jewelery":
+                let filter = items.filter { $0.category.starts(with: "j")}.sorted()
+                cell.load(with: filter[indexPath.row])
+            case "electronics" :
+                let filter = items.filter { $0.category.starts(with: "e")}.sorted()
+                cell.load(with: filter[indexPath.row])
+            case "women's clothing":
+                let filter = items.filter { $0.category.starts(with: "w")}.sorted()
+                cell.load(with: filter[indexPath.row])
+            default:
+                print("default")
+            }
+        }
         return cell
     }
-    
-    
-    
 }
 
 extension ProductListVC:UISearchBarDelegate {
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        
-        aramayapiliyorMu = true
-        aramasonucuItemler = ItemListViewModel.ItemsList.filter { $0.title.starts(with: searchText)}
-        
-        collectionView.reloadData()
-        
+        isSearching = true
+        self.filterArray(searchText: searchText)
     }
+    func filterArray(searchText:String) {
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines) != "" && isSearching == true {
+            searchedItems = items.filter { $0.title.starts(with: searchText)}
+        } else {
+            searchedItems = items
+        }
+    }
+    
 }
 
 

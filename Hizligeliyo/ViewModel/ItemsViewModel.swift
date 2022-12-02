@@ -9,38 +9,40 @@ import Foundation
 import UIKit
 
 struct ItemsListViewModel {
-    let ItemsList : [ItemsModel]
+    var ItemsList : [ItemsModel]
     
     func numberOfItemsInSection() -> Int {
         return self.ItemsList.count
     }
     
-    func ItemsAtIndex(_ index: Int) -> ItemsViewModel {
-        let Item = self.ItemsList[index]
+    /* func ItemsAtIndex(_ index: Int) -> ItemsViewModel {
+        var Item = self.ItemsList[index]
         return ItemsViewModel(Items: Item)
-    }
+    } */
+    
+    // MVVM -> MVC?
 }
 
-
 struct ItemsViewModel {
-    let Items : ItemsModel
+    var Items : ItemsModel
     
-    var id : Int {
+    var id : Int? {
         return self.Items.id
     }
-    var title : String {
+    var title : String? {
         return self.Items.title
     }
-    var price : Float {
+    var price : Float?{
         return self.Items.price
     }
-    var description : String {
+    var description : String? {
         return self.Items.description
     }
-    var category : String {
+    var category : String? {
         return self.Items.category
     }
-    var image : String {
+    var image : String? {
         return self.Items.image
     }
 }
+ 
